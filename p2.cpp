@@ -1,87 +1,137 @@
-#include<bits/stdc++.h>
+#include <cstdio>
+#include <queue>
+#include <cstring>
+#include <vector>
+#include <iostream>
+
+#define MAXN 100 // maximum no. of nodes in graph
+#define INF 2147483646
+
 using namespace std;
 
+// represents the capacities of the edges
+int **capacity;
+// shows how much flow has passed through an edge
+int **flowPassed; 
+// shows the maximum flow to a node in the path built by the BFS
+int *path_flow;
+// represents the graph and it may contain negative edges
+vector<int> *graph;
 
-// pair<int, int> pairs node name with weight.
-typedef pair<int, int> vertex;
+int *parent;
 
-// AdjacencyListType is just a name for vector<list <vertex>>
-// The outermost vector is initialized to size v here.
-// Think of the outermost vector as the leftmost side or, column in the visual representation
-// shown in the books. The inner list is linked list containing nodes and weights. The
-// inner vector stores pair<int, int> in each of its slot. Where pair<int, int> is used to
-// show the adjacent node and the weight between the nodes. Basically each of the boxes.
-typedef vector<list <vertex>> AdjacencyListType;
+int bfs(int s, int t) {
+    queue<int> q;
+    parent[s] = -2;
+    q.push(s);
+    path_flow[s] = INF;
 
+    while(!q.empty()) {
+        int current = q.front();
+        q.pop();
 
-// If there are no adjacent node "NONE" is printed.
-// Now get the node name and the pair by accessing the first and second property.
-// Since I have paired node name with weight so, the first is name and next one is the weight
-void printCompleteAdjacencyList( AdjacencyListType &adjList, int &v ){
+        for (int i = 0; i < graph[current].size(); i++) {
+            int to = graph[current][i];
+            if (parent[to] == -1) { // Unvisited
+                if (capacity[current][to] - flowPassed[current][to] > 0) {
+                    // update parent node
+                    parent[to] = current;
+                    // check min residual edge capacity
+                    path_flow[to] = min(path_flow[current], capacity[current][to] - flowPassed[current][to]);
 
-    for(int i = 0; i < adjList.size(); ++i){
-
-        int adjNodes = adjList[i].size();
-        printf("Adjacent of: %d", i);
-
-        if(adjNodes > 0){
-            list<vertex>::iterator it = adjList[i].begin();
-            while(it != adjList[i].end()){
-                printf(" -> %d (w:%d)", (*it).first, (*it).second);
-                ++it;
+                    if (to == t) {
+                        return path_flow[t];
+                    }
+                    // add future node to queue
+                    q.push(to);
+                }
             }
-        }else{
-            printf(" -> NONE");
+        }
+    }
+    return 0;
+}
+
+int edmonds_karp(int s, int t) {
+    int maxFlow = 0;
+    while(1) {
+        //ind an augmented path and max flow corresponding to it
+        int flow = bfs(s, t);
+        // if no path available, flow will be 0
+        if (flow == 0) { 
+            break;
         }
 
-        printf("\n");
+        maxFlow += flow;
+        int current = t;
+        // we update the passed flow matrix
+        while(current != s) {
+            int prev = parent[current];
+            flowPassed[prev][current] += flow;
+            flowPassed[current][prev] -= flow;
+            current = prev;
+        }
     }
 
+    return maxFlow;
 }
 
-// Makes undirected weighed pair (a, b) with cost w
-void makePair(AdjacencyListType &adjList, int a, int b, int w) {
-	adjList[a].push_back(make_pair(b, w));
-	adjList[b].push_back(make_pair(a, w));
-	printf("makePair(%d, %d, %d)\n", a, b, w);
+int main() {
 
-}
+    int n, k, i;
+    cin >> n >> k;
 
-int main(){
+    graph = new vector<int>[n+2];
+    capacity = new int*[n+2];
+    flowPassed = new int*[n+2];
+    for (i = 0; i < n+2; i++) {
+        capacity[i] = new int[n+2];
+        flowPassed[i] = new int[n+2];
+    }
+    path_flow = new int[n+2];
+    parent = new int[n+2];
+    for (int i = 0; i < n + 2; i++) {
+        path_flow[i] = 0;
+        parent[i] = -1; // -> unvisited
+    }
 
-	// Input format:
-	// n k (n - number of processes, k - number of entries different than 0 in the matrix of communication costs)
-	// n lines:
-	// 		Xi Yi (i ... n), (execution costs of process i in X and Y processors)
-	// k lines:
-	// 		i j c (i, j - identifiers of process i and j, c - cost of communication between i and j)
-
-	int n, k;
-	cin >> n >> k;
-
-	// Create the adjacency list structure
-    AdjacencyListType adjList(n + 2); // n processes + 2 processors (X and Y)
-	
-	int cost_xi, cost_yi, c_ij, i, j;
 
 	// Define x as the first index of the adjacency list and y and the end (source and target)
-	int x = 0;
-	int y = n + 1;
+    int x = 0;
+    int y = n + 1;
 
-	for (i = 1; i <= n; i++) {
-		cin >> cost_xi >> cost_yi;
-		makePair(adjList, x, i, cost_xi);
-		makePair(adjList, i, y, cost_yi);
-	}
+    int cost_xi, cost_yi, c_ij, j;
 
-	for (int l = 0; l < k; l++) {
-		cin >> i >> j >> c_ij;
-		makePair(adjList, i, j, c_ij);
-	}
+    for (i = 1; i <= n; i++) {
+        cin >> cost_xi >> cost_yi;
 
-    // Show the complete adjacency list structure
-    printf("\nWhole Adjacency List:\n");
-    printCompleteAdjacencyList(adjList, y);
+        // X ---- cost_xi ----- pi
+        graph[x].push_back(i);
+        graph[i].push_back(x);
+
+        capacity[x][i] = cost_xi;
+        capacity[i][x] = cost_xi;
+
+        // Y ---- cost_yi ----- pi
+        graph[y].push_back(i);
+        graph[i].push_back(y);
+
+        capacity[i][y] = cost_yi;
+        capacity[y][i] = cost_yi; 
+    }
+
+    for (int l = 0; l < k; l++) {
+        cin >> i >> j >> c_ij;
+
+        // i ---- c_ij ----- j
+        graph[i].push_back(j);
+        graph[j].push_back(i);
+
+        capacity[i][j] = c_ij;
+        capacity[j][i] = c_ij;
+    }
+
+    int maxFlow = edmonds_karp(x, y);
+    cout << "Max flow: " << maxFlow << endl;
 
     return 0;
 }
