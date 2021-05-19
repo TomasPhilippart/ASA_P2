@@ -5,45 +5,57 @@
 #include <iostream>
 
 #define MAXN 100 // maximum no. of nodes in graph
-#define INF 2147483646
+#define INF 999
 
 using namespace std;
 
 // represents the capacities of the edges
 int **capacity;
+
 // shows how much flow has passed through an edge
 int **flowPassed; 
-// shows the maximum flow to a node in the path built by the BFS
-int *path_flow;
+
 // represents the graph and it may contain negative edges
 vector<int> *graph;
 
 int *parent;
+bool *visited;
 
-int bfs(int s, int t) {
+int bfs(int source, int target) {
+
+    for (int i = 0; i < target + 1; i++) {
+        visited[i] = false;
+        parent[i] = -1;
+    }
+    
     queue<int> q;
-    parent[s] = -2;
-    q.push(s);
-    path_flow[s] = INF;
+    q.push(source);
+    visited[source] = true;
 
-    while(!q.empty()) {
-        int current = q.front();
+    int minFlow = INF;
+
+    while (!q.empty()) {
+        int u = q.front();
         q.pop();
 
-        for (int i = 0; i < graph[current].size(); i++) {
-            int to = graph[current][i];
-            if (parent[to] == -1) { // Unvisited
-                if (capacity[current][to] - flowPassed[current][to] > 0) {
-                    // update parent node
-                    parent[to] = current;
-                    // check min residual edge capacity
-                    path_flow[to] = min(path_flow[current], capacity[current][to] - flowPassed[current][to]);
-
-                    if (to == t) {
-                        return path_flow[t];
+        // for every adjacent node
+        for (size_t i = 0; i < graph[u].size(); i++) {
+            int v = graph[u][i];
+            if (!visited[v]) {
+                if (capacity[u][v] - flowPassed[u][v] > 0) {
+                    parent[v] = u;
+                    visited[v] = true;
+                    
+                    
+                    if (v == target) {
+                        while (v != source) { // backtrace to the source
+                            minFlow = min(minFlow, capacity[parent[v]][v] - flowPassed[parent[v]][v]);
+                            v = parent[v];
+                        }
+                        return minFlow;
                     }
-                    // add future node to queue
-                    q.push(to);
+
+                    q.push(v);
                 }
             }
         }
@@ -51,8 +63,10 @@ int bfs(int s, int t) {
     return 0;
 }
 
+
 int edmonds_karp(int s, int t) {
     int maxFlow = 0;
+
     while(1) {
         //ind an augmented path and max flow corresponding to it
         int flow = bfs(s, t);
@@ -64,7 +78,7 @@ int edmonds_karp(int s, int t) {
         maxFlow += flow;
         int current = t;
         // we update the passed flow matrix
-        while(current != s) {
+        while(current > 0) {
             int prev = parent[current];
             flowPassed[prev][current] += flow;
             flowPassed[current][prev] -= flow;
@@ -80,20 +94,23 @@ int main() {
     int n, k, i;
     cin >> n >> k;
 
+    // Initialize data structures
     graph = new vector<int>[n+2];
     capacity = new int*[n+2];
     flowPassed = new int*[n+2];
+    parent = new int[n+2];
+    visited = new bool[n+2];
+    
     for (i = 0; i < n+2; i++) {
         capacity[i] = new int[n+2];
         flowPassed[i] = new int[n+2];
     }
-    path_flow = new int[n+2];
-    parent = new int[n+2];
-    for (int i = 0; i < n + 2; i++) {
-        path_flow[i] = 0;
-        parent[i] = -1; // -> unvisited
-    }
 
+    for (i = 0; i < n+2; i++) {
+        for (int j = 0; j < n+2; j++) {
+            flowPassed[i][j] = 0;
+        }
+    }
 
 	// Define x as the first index of the adjacency list and y and the end (source and target)
     int x = 0;
@@ -131,7 +148,7 @@ int main() {
     }
 
     int maxFlow = edmonds_karp(x, y);
-    cout << "Max flow: " << maxFlow << endl;
+    cout << maxFlow << endl;
 
     return 0;
 }
