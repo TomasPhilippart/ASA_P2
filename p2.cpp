@@ -5,7 +5,7 @@
 #include <iostream>
 
 #define MAXN 100 // maximum no. of nodes in graph
-#define INF 999
+#define INF 2147483647
 
 using namespace std;
 
