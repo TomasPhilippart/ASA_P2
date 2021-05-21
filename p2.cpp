@@ -4,18 +4,17 @@
 #include <vector>
 #include <iostream>
 
-#define MAXN 100 // maximum no. of nodes in graph
 #define INF 2147483647
 
 using namespace std;
 
-// represents the capacities of the edges
+// capacities of the edges
 int **capacity;
 
-// shows how much flow has passed through an edge
+// how much flow has passed through an edge
 int **flowPassed; 
 
-// represents the graph and it may contain negative edges
+// graph representation (adjacency list)
 vector<int> *graph;
 
 int *parent;
@@ -68,16 +67,15 @@ int edmonds_karp(int s, int t) {
     int maxFlow = 0;
 
     while(1) {
-        //ind an augmented path and max flow corresponding to it
+        // find augmenting path
         int flow = bfs(s, t);
-        // if no path available, flow will be 0
         if (flow == 0) { 
             break;
         }
 
         maxFlow += flow;
         int current = t;
-        // we update the passed flow matrix
+        // update the passed flow matrix
         while(current > 0) {
             int prev = parent[current];
             flowPassed[prev][current] += flow;
@@ -112,7 +110,7 @@ int main() {
         }
     }
 
-	// Define x as the first index of the adjacency list and y and the end (source and target)
+    // Define x as the first index of the adjacency list and y and the end (source and target)
     int x = 0;
     int y = n + 1;
 
